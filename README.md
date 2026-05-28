@@ -20,6 +20,15 @@
 | 接口文档 | 使用 FastAPI OpenAPI 文档，并内置本地 Swagger UI 静态资源 |
 | 自动化测试 | 使用 pytest / pytest-asyncio 覆盖接口、服务、任务和爬虫核心逻辑 |
 
+## 项目亮点
+
+- 后端采用典型分层结构，将 API、Schema、Model、Service、Crawler、Worker 拆开，方便维护和扩展。
+- 使用 SQLAlchemy Async 构建异步数据库访问，支持 SQLite 本地演示和 PostgreSQL 部署。
+- 使用 Celery + Redis 将爬虫、分析和报告生成从 API 请求中拆出，避免耗时任务阻塞接口。
+- 爬虫层提供统一的 `BaseSpider`、`SpiderManager` 和入库管道，便于接入多个招聘网站或 demo 数据源。
+- 报告模块使用 pyecharts 生成可视化 HTML 页面，适合直接展示薪资、技能、岗位趋势和公司排行。
+- 项目包含 Docker Compose、Alembic 迁移和 pytest 测试，能够体现后端项目工程化能力。
+
 ## 技术栈
 
 - API 框架：FastAPI、Uvicorn
@@ -70,8 +79,28 @@ Celery Worker 执行爬虫
 岗位查询 API          薪资/技能/趋势分析
                            |
                            v
-                    pyecharts HTML 报告
+pyecharts HTML 报告
 ```
+
+## 关键实现
+
+| 设计点 | 实现方式 | 项目价值 |
+| --- | --- | --- |
+| 认证鉴权 | 注册时使用密码哈希保存，登录后签发 JWT，接口通过 Bearer Token 识别用户 | 展示后端安全基础能力 |
+| 异步数据库 | 使用 SQLAlchemy AsyncSession 和 Pydantic Schema 做数据读写与响应约束 | 适合高并发 API 场景 |
+| 任务生命周期 | API 创建任务后写入任务表，Celery 执行并回写状态、结果和错误信息 | 便于追踪爬虫/报告任务 |
+| 爬虫抽象 | 统一 Spider 输入参数、抓取结果、代理池、失败重试和数据管道 | 减少新增数据源成本 |
+| 数据清洗 | 对薪资区间、城市、技能、公司、URL 和重复岗位做标准化处理 | 提高分析结果可信度 |
+| 报告安全 | 下载报告时做路径检查，避免任意文件读取 | 展示接口安全意识 |
+
+## 演示流程
+
+1. 启动数据库、Redis、API 和 Celery Worker。
+2. 打开 `http://localhost:8000/docs`，先调用注册和登录接口获取 Token。
+3. 使用 `/tasks` 创建 demo 爬虫任务，等待任务状态变为完成。
+4. 调用 `/jobs` 查看岗位列表，使用城市、技能等条件筛选。
+5. 调用 `/analytics/salary`、`/analytics/skills`、`/analytics/trends` 查看分析结果。
+6. 调用 `/reports/generate` 生成 HTML 报告，再通过 `/reports/download/{filename}` 下载查看。
 
 ## 目录结构
 
@@ -181,6 +210,16 @@ Flower:  http://localhost:5555
 
 真实招聘站点可能存在反爬限制，推荐先使用 `demo` 爬虫跑通任务流、数据入库和分析报告。
 
+## 任务类型说明
+
+| task_type | 执行内容 | 典型参数 |
+| --- | --- | --- |
+| `crawl` | 执行招聘数据采集，清洗后写入数据库 | `keyword`、`city`、`pages`、`spiders` |
+| `analyze` | 汇总岗位数量、薪资和技能统计 | 可根据业务扩展筛选条件 |
+| `report` | 生成 pyecharts HTML 可视化报告 | 可扩展城市、岗位关键字、时间范围 |
+
+任务状态会记录在任务表中，方便前端或 API 客户端轮询任务进度。
+
 ## 测试
 
 ```bash
@@ -219,6 +258,26 @@ DATABASE_URL=sqlite+aiosqlite:///./job_insight.db
 ```
 
 真实 `.env`、数据库文件和报告输出不应提交到仓库。
+
+## 可用于简历展示的能力
+
+| 能力方向 | README 中对应内容 |
+| --- | --- |
+| FastAPI 后端开发 | REST API、OpenAPI 文档、依赖注入、异常处理 |
+| 数据库建模 | SQLAlchemy ORM、Alembic 迁移、异步查询 |
+| 认证与安全 | JWT、密码哈希、接口鉴权、报告路径安全 |
+| 异步任务 | Celery 队列、Redis Broker、任务状态追踪、失败重试 |
+| 数据采集 | 爬虫基类、站点适配、代理池、数据清洗和去重 |
+| 数据分析 | 薪资统计、技能排行、趋势分析和 HTML 报告 |
+| 测试与部署 | pytest、Docker Compose、本地 Swagger UI |
+
+## 后续优化方向
+
+- 增加前端管理页面，展示任务状态、岗位列表、分析图表和报告下载。
+- 对爬虫任务增加更细粒度的限速、代理质量评分和站点失败熔断。
+- 增加岗位数据版本表，保留同一岗位在不同时间的薪资和描述变化。
+- 增加定时分析任务，将热门技能、城市薪资和岗位趋势缓存为统计快照。
+- 将报告模板做成可配置模块，支持按城市、岗位方向或时间范围生成专题报告。
 
 ## 简历描述参考
 
