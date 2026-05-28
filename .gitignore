@@ -1,0 +1,32 @@
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.coverage
+**/htmlcov/
+
+# Virtual environments
+**/.venv/
+**/venv/
+
+# Secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime data
+**/*.db
+**/*.sqlite3
+**/celerybeat-schedule*
+job-insight-platform/reports/*
+!job-insight-platform/reports/.gitkeep
+
+# Build / IDE / OS
+**/dist/
+**/build/
+**/.idea/
+**/.vscode/
+**/.DS_Store
